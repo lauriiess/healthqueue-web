@@ -164,6 +164,9 @@ export default function StaffPage() {
     const errors = {}
     if (!form.fullName.trim()) errors.fullName = 'Full name is required'
     if (!form.email.trim()) errors.email = 'Email is required'
+    if (form.phone && !/^\d{11}$/.test(form.phone)) {
+      errors.phone = 'Phone number must contain exactly 11 digits'
+    }
 
     const targetSpecialization =
       form.specialization === 'Other'
@@ -522,23 +525,27 @@ export default function StaffPage() {
             <div className="modal-body">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                 <FormField
-                  label="Full Name *"
+                  label={ <> Full Name <span style={{ color: 'var(--error)' }}>*</span> </> }
                   value={form.fullName}
                   error={formErrors.fullName}
                   onChange={(val) => handleFieldChange('fullName', val)}
                 />
                 <FormField
-                  label="Email Address *"
+                  label={ <> Email Address <span style={{ color: 'var(--error)' }}>*</span> </> }
                   type="email"
                   value={form.email}
                   error={formErrors.email}
                   onChange={(val) => handleFieldChange('email', val)}
                 />
+                
                 <FormField
                   label="Phone Number"
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
                   value={form.phone}
-                  onChange={(val) => handleFieldChange('phone', val)}
+                  error={formErrors.phone}
+                  onChange={(val) => handleFieldChange('phone', val.replace(/\D/g, '').slice(0, 11))}
                 />
                 <SelectField
                   label="Gender"
@@ -547,7 +554,7 @@ export default function StaffPage() {
                   onChange={(val) => handleFieldChange('gender', val)}
                 />
                 <SelectField
-                  label="Specialization *"
+                  label={ <> Specialization <span style={{ color: 'var(--error)' }}>*</span> </> }
                   value={form.specialization}
                   options={[
                     ...SPECIALIZATION_OPTIONS,
@@ -557,7 +564,7 @@ export default function StaffPage() {
                 />
                 {form.specialization === 'Other' && (
                   <FormField
-                    label="Custom Specialization *"
+                  label={ <> Custom Specialization <span style={{ color: 'var(--error)' }}>*</span> </> }
                     value={form.customSpecialization}
                     error={formErrors.specialization}
                     onChange={(val) => handleFieldChange('customSpecialization', val)}
@@ -586,13 +593,15 @@ export default function StaffPage() {
   )
 }
 
-function FormField({ label, type = 'text', value, error, onChange }) {
+function FormField({ label, type = 'text', inputMode, maxLength, value, error, onChange }) {
   return (
     <div className="form-group">
       <label className="form-label">{label}</label>
       <input
         className="form-input"
         type={type}
+        inputMode={inputMode}
+        maxLength={maxLength}
         autoComplete="off"
         value={value || ''}
         style={{ border: error ? '1px solid #DC2626' : undefined }}

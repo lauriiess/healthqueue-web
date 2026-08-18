@@ -415,7 +415,7 @@ export default function PatientsPage() {
             </div>
             <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
               <FormField
-                label="Full Name *"
+                label={ <> Full Name <span style={{ color: 'var(--error)' }}>*</span> </> }
                 value={form.fullName}
                 error={formErrors.fullName}
                 onChange={(val) => handleFieldChange('fullName', val)}
@@ -428,11 +428,15 @@ export default function PatientsPage() {
                 onChange={(val) => handleFieldChange('email', val)}
               />
               <FormField
-                label="Phone Number"
-                value={form.phone}
-                error={formErrors.phone}
-                onChange={(val) => handleFieldChange('phone', val)}
-              />
+                  label="Phone Number"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={11}
+                  value={form.phone}
+                  error={formErrors.phone}
+                  onChange={(val) => handleFieldChange('phone', val.replace(/\D/g, '').slice(0, 11))}
+                />
+                
               <FormField
                 label="Date of Birth"
                 type="date"
