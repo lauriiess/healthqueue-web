@@ -233,8 +233,8 @@ export default function ChatbotAdminPage() {
         </div>
         <div className={styles.statusBadge}>
           <span className={styles.statusDot} />
-          Chatbot Status: <strong>Active</strong>
-          <span className="badge badge-green" style={{ marginLeft: 6 }}>
+          Chatbot Status:
+          <span className="badge badge-green">
             Active
           </span>
         </div>
@@ -369,9 +369,9 @@ export default function ChatbotAdminPage() {
 
       {/* ── SETTINGS TAB ── */}
       {tab === 'Settings' && (
-        <div className="card" style={{ padding: 28 }}>
+        <div className="card" style={{ padding: 28, maxWidth: 700, margin: '0 auto' }}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>Chatbot Settings</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
               ['Chatbot Mode', 'FAQ Fallback (No Rasa server configured)'],
               ['Default Language', 'Filipino / English (Bilingual)'],

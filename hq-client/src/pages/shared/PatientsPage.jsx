@@ -507,6 +507,7 @@ export default function PatientsPage() {
 
               <FormField
                 label="Phone"
+                placeholder="09XXXXXXXXX"
                 value={form.phone}
                 onChange={(val) => handleFieldChange('phone', val)}
               />

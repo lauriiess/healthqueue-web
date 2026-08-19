@@ -42,6 +42,7 @@ const UserSchema = new mongoose.Schema(
     enum: ['Male', 'Female', 'Other', 'Prefer not to say'], 
     default: 'Male' 
   },
+    specialization: { type: String, trim: true, default: '' },
   },
   { timestamps: true }
 );
@@ -75,6 +76,8 @@ UserSchema.methods.toSafeObject = function () {
     clinicId:   this.clinicId,
     isVerified: this.isVerified,
     isActive:   this.isActive,
+    gender:     this.gender,
+    specialization: this.specialization,
     createdAt:  this.createdAt,
   };
 };

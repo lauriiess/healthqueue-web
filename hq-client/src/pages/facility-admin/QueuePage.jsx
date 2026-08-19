@@ -283,7 +283,7 @@ export default function QueueAndAppointmentsPage() {
               value={qStatus}
               onChange={(e) => setQStatus(e.target.value)}
             >
-              {['All', 'waiting', 'serving', 'done', 'completed', 'cancelled', 'no_show'].map((status) => (
+              {['All', 'Waiting', 'Serving', 'Done', 'Completed', 'Cancelled', 'No Show'].map((status) => (
                 <option key={status} value={status}>
                   {status === 'All' ? 'All Status' : status}
                 </option>

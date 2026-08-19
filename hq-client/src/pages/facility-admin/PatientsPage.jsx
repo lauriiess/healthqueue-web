@@ -50,6 +50,8 @@ export default function PatientsPage() {
   const [formErrors, setFormErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [deactivateTarget, setDeactivateTarget] = useState(null)
+  const [deactivating, setDeactivating] = useState(false)
 
   const showToast = useCallback((message) => {
     setToast(message)
@@ -152,13 +154,16 @@ export default function PatientsPage() {
   }
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm('Are you sure you want to deactivate this patient?')) return
+    setDeactivating(true)
     try {
       await patientsApi.deactivate(id)
+      setDeactivateTarget(null)
       showToast('Patient deactivated')
       loadPatients()
     } catch (e) {
       showToast(e?.response?.data?.message || 'Failed to deactivate patient')
+    } finally {
+      setDeactivating(false)
     }
   }
 
@@ -340,31 +345,34 @@ export default function PatientsPage() {
                   <td style={{ fontSize: 13 }}>{p.philHealthNumber || '—'}</td>
                   <td style={{ fontSize: 13 }}>{p.bloodType || '—'}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        className="btn btn-outline"
-                        style={{ fontSize: 11, padding: '3px 8px' }}
+                        className="btn btn-outline btn-sm"
+                        title="View"
                         onClick={() => openView(p)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                       >
                         View
                       </button>
                       <button
-                        className="btn btn-outline"
-                        style={{ fontSize: 11, padding: '3px 8px' }}
+                        className="btn btn-outline btn-sm"
+                        title="Edit"
                         onClick={() => openEdit(p)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                       >
                         Edit
                       </button>
                       <button
-                        className="btn"
+                        className="btn btn-sm"
                         style={{
-                          fontSize: 11,
-                          padding: '3px 8px',
-                          color: 'var(--error)',
                           background: 'var(--error-lt)',
-                          border: 'none',
+                          color: 'var(--error)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
                         }}
-                        onClick={() => handleDeactivate(p._id)}
+                        title="Deactivate"
+                        onClick={() => setDeactivateTarget(p)}
                       >
                         Deactivate
                       </button>
@@ -413,7 +421,7 @@ export default function PatientsPage() {
                 ✕
               </button>
             </div>
-            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <FormField
                 label={ <> Full Name <span style={{ color: 'var(--error)' }}>*</span> </> }
                 value={form.fullName}
@@ -621,6 +629,36 @@ export default function PatientsPage() {
                 }}
               >
                 Edit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DEACTIVATE CONFIRMATION MODAL ── */}
+      {deactivateTarget && (
+        <div className="modal-overlay" onClick={() => setDeactivateTarget(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Deactivate Patient</span>
+              <button className="modal-close" onClick={() => setDeactivateTarget(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+                Are you sure you want to deactivate{' '}
+                <strong style={{ color: 'var(--text)' }}>{deactivateTarget.fullName}</strong>? Their record
+                will be marked inactive.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setDeactivateTarget(null)}>Cancel</button>
+              <button
+                className="btn btn-sm"
+                style={{ background: 'var(--error)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6 }}
+                onClick={() => handleDeactivate(deactivateTarget._id)}
+                disabled={deactivating}
+              >
+                {deactivating ? 'Deactivating…' : 'Yes, Deactivate'}
               </button>
             </div>
           </div>

@@ -56,7 +56,8 @@ export default function StaffPage() {
   const [formErrors, setFormErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
-
+  const [deactivateTarget, setDeactivateTarget] = useState(null)
+  const [deactivating, setDeactivating] = useState(false)
   const toastTimerRef = useRef(null)
 
   const showToast = useCallback((message) => {
@@ -216,13 +217,16 @@ export default function StaffPage() {
   }
 
   const handleDeactivate = async (id) => {
-    if (!window.confirm('Are you sure you want to deactivate this staff member?')) return
+    setDeactivating(true)
     try {
       await staffApi.deactivate(id)
+      setDeactivateTarget(null)
       showToast('Staff member deactivated')
       await loadStaff()
     } catch (e) {
       showToast(e?.response?.data?.message || 'Failed to deactivate staff member')
+    } finally {
+      setDeactivating(false)
     }
   }
 
@@ -452,9 +456,9 @@ export default function StaffPage() {
                               gap: 6,
                             }}
                             title="Deactivate"
-                            onClick={() => handleDeactivate(s._id)}
+                            onClick={() => setDeactivateTarget(s)}
                           >
-                            Delete
+                            Deactivate
                           </button>
                         </div>
                       </td>
@@ -523,7 +527,7 @@ export default function StaffPage() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <FormField
                   label={ <> Full Name <span style={{ color: 'var(--error)' }}>*</span> </> }
                   value={form.fullName}
@@ -542,6 +546,7 @@ export default function StaffPage() {
                   label="Phone Number"
                   type="tel"
                   inputMode="numeric"
+                  placeholder="09XXXXXXXXX"
                   maxLength={11}
                   value={form.phone}
                   error={formErrors.phone}
@@ -584,6 +589,36 @@ export default function StaffPage() {
               </button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : modal === 'edit' ? 'Save Changes' : 'Add Staff'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DEACTIVATE CONFIRMATION MODAL ── */}
+      {deactivateTarget && (
+        <div className="modal-overlay" onClick={() => setDeactivateTarget(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Deactivate Staff Member</span>
+              <button className="modal-close" onClick={() => setDeactivateTarget(null)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+                Are you sure you want to deactivate{' '}
+                <strong style={{ color: 'var(--text)' }}>{deactivateTarget.fullName}</strong>? They will no longer
+                be able to log in or be assigned to the queue.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setDeactivateTarget(null)}>Cancel</button>
+              <button
+                className="btn btn-sm"
+                style={{ background: 'var(--error)', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 6 }}
+                onClick={() => handleDeactivate(deactivateTarget._id)}
+                disabled={deactivating}
+              >
+                {deactivating ? 'Deactivating…' : 'Yes, Deactivate'}
               </button>
             </div>
           </div>

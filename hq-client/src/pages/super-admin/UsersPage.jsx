@@ -95,6 +95,7 @@ const EMPTY_USER_FORM = {
 
 export default function UserManagementPage() {
   const [tab, setTab] = useState('list') // 'list' | 'create'
+  const [listView, setListView] = useState('active') // 'active' | 'deactivated'
   const [toast, setToast] = useState('')
 
   const [users, setUsers] = useState([])
@@ -343,14 +344,15 @@ export default function UserManagementPage() {
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase()
     return users.filter((u) => {
+      const matchView = listView === 'active' ? u.isActive : !u.isActive
       const matchRole = roleFilter === 'all' || u.role === roleFilter
       const matchSearch =
         !query ||
         u.fullName?.toLowerCase().includes(query) ||
         u.email?.toLowerCase().includes(query)
-      return matchRole && matchSearch
+      return matchView && matchRole && matchSearch
     })
-  }, [users, search, roleFilter])
+  }, [users, search, roleFilter, listView])
 
   const userStats = useMemo(() => {
     return {
@@ -449,6 +451,41 @@ export default function UserManagementPage() {
             </div>
           )}
 
+          {/* Active / Deactivated View Toggle */}
+          <div
+            style={{
+              display: 'flex',
+              background: 'var(--bg-2)',
+              borderRadius: 8,
+              padding: 3,
+              gap: 0,
+              width: 'fit-content',
+              marginBottom: 12,
+            }}
+          >
+            {[
+              ['active', `Active Accounts (${userStats.active})`],
+              ['deactivated', `Deactivated Accounts (${userStats.inactive})`],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setListView(v)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 6,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: listView === v ? 'var(--primary)' : 'transparent',
+                  color: listView === v ? '#fff' : 'var(--text-2)',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="card">
             {/* Toolbar */}
             <div className={styles.toolbar}>
@@ -528,12 +565,12 @@ export default function UserManagementPage() {
                   ) : filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>
-                        No users found
+                        {listView === 'active' ? 'No active users found' : 'No deactivated users found'}
                       </td>
                     </tr>
                   ) : (
                     filteredUsers.map((u) => (
-                      <tr key={u._id} style={{ opacity: u.isActive ? 1 : 0.55 }}>
+                      <tr key={u._id}>
                         <td>
                           <div style={{ fontWeight: 600, fontSize: 13 }}>{u.fullName}</div>
                           <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.email}</div>
@@ -573,7 +610,7 @@ export default function UserManagementPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {u.role === 'facility_admin' && (
+                            {u.role === 'facility_admin' && u.isActive && (
                               <button className="btn btn-primary btn-sm" onClick={() => openAssign(u)}>
                                 Assign Clinic
                               </button>
@@ -605,7 +642,7 @@ export default function UserManagementPage() {
 
       {/* ── 2. CREATE USER TAB ── */}
       {tab === 'create' && (
-        <>
+        <div style={{ maxWidth: 640, margin: '0 auto' }}>
           <div className={`card ${styles.banner}`}>
             <div className={styles.bannerIcon}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -686,9 +723,10 @@ export default function UserManagementPage() {
                 <label className="form-label">Phone Number</label>
                 <input
                   className="form-input"
-                  placeholder="+63 9XX XXX XXXX"
+                  placeholder="09XXXXXXXXX"
                   value={userForm.phone}
-                  onChange={(e) => setUserForm((f) => ({ ...f, phone: e.target.value }))}
+                 onChange={(e) => { const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 11)
+                   setUserForm((f) => ({ ...f, phone: digitsOnly })) }}
                 />
               </div>
             </div>
@@ -787,7 +825,7 @@ export default function UserManagementPage() {
               {savingUser ? 'Creating…' : 'Create User'}
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {/* ── ROLE MANAGEMENT DIRECTORY MODAL ── */}

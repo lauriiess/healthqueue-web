@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Patient = require('../models/Patient');
 const Staff = require('../models/Staff');
+const { logAction } = require('../utils/auditLog');
 
 // GET /api/users
 const getUsers = async (req, res) => {
@@ -47,7 +48,7 @@ const getUser = async (req, res) => {
 
 // POST /api/users
 const createUser = async (req, res) => {
-  const { fullName, email, phone, password, role, clinicId } = req.body;
+  const { fullName, email, phone, password, role, clinicId, gender, specialization } = req.body;
 
   if (!fullName || !email || !password || !role) {
     return res.status(400).json({ message: 'fullName, email, password, and role are required.' });
@@ -89,6 +90,8 @@ const createUser = async (req, res) => {
           role,
           clinicId: targetClinic,
           isVerified: true,
+          gender: gender || undefined,
+          specialization: specialization || '',
         },
       ],
       session ? { session } : {}
@@ -104,6 +107,8 @@ const createUser = async (req, res) => {
             fullName: user.fullName,
             email: user.email,
             phone: user.phone,
+            gender: user.gender,
+            specialization: user.specialization,
           },
         ],
         session ? { session } : {}
@@ -111,6 +116,16 @@ const createUser = async (req, res) => {
     }
 
     if (session) await session.commitTransaction();
+
+    await logAction({
+      actor: req.user,
+      action: 'create',
+      targetType: 'User',
+      targetId: user._id,
+      targetLabel: user.fullName,
+      clinicId: targetClinic,
+      details: { role: user.role, email: user.email },
+    });
 
     return res.status(201).json({
       success: true,
@@ -128,7 +143,7 @@ const createUser = async (req, res) => {
 // PUT /api/users/:id
 const updateUser = async (req, res) => {
   try {
-    const { fullName, phone, clinicId, isActive } = req.body;
+    const { fullName, phone, clinicId, isActive, gender, specialization } = req.body;
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found.' });
 
@@ -140,13 +155,31 @@ const updateUser = async (req, res) => {
     if (phone !== undefined) user.phone = phone;
     if (clinicId !== undefined && req.user.role === 'super_admin') user.clinicId = clinicId;
     if (isActive !== undefined) user.isActive = isActive;
+    if (gender !== undefined) user.gender = gender;
+    if (specialization !== undefined) user.specialization = specialization;
 
     await user.save();
 
-    // Keep active status synced with Staff record if applicable
-    if (isActive !== undefined && user.role === 'staff') {
-      await Staff.findOneAndUpdate({ user: user._id }, { isActive });
+    // Keep active status, gender, and specialization synced with Staff record if applicable
+    if (user.role === 'staff') {
+      const staffUpdate = {};
+      if (isActive !== undefined) staffUpdate.isActive = isActive;
+      if (gender !== undefined) staffUpdate.gender = gender;
+      if (specialization !== undefined) staffUpdate.specialization = specialization;
+      if (Object.keys(staffUpdate).length > 0) {
+        await Staff.findOneAndUpdate({ user: user._id }, staffUpdate);
+      }
     }
+
+    await logAction({
+      actor: req.user,
+      action: 'update',
+      targetType: 'User',
+      targetId: user._id,
+      targetLabel: user.fullName,
+      clinicId: user.clinicId,
+      details: req.body,
+    });
 
     return res.json(user.toSafeObject());
   } catch (err) {
@@ -170,6 +203,15 @@ const deactivateUser = async (req, res) => {
     if (user.role === 'staff') {
       await Staff.findOneAndUpdate({ user: user._id }, { isActive: false });
     }
+
+    await logAction({
+      actor: req.user,
+      action: 'deactivate',
+      targetType: 'User',
+      targetId: user._id,
+      targetLabel: user.fullName,
+      clinicId: user.clinicId,
+    });
 
     return res.json({ message: 'User deactivated.', user: user.toSafeObject() });
   } catch (err) {
