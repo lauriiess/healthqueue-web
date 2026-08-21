@@ -442,24 +442,22 @@ export default function ClinicManagementPage() {
                 />
               </div>
 
-              <div className="form-group" style={{ display: 'flex', gap: 20, marginTop: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={!!form.acceptsWalkIn}
-                    onChange={(e) => handleFieldChange('acceptsWalkIn', e.target.checked)}
+              <div className={styles.formGrid2} style={{ marginTop: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Toggle
+                    value={!!form.acceptsWalkIn}
+                    onChange={(val) => handleFieldChange('acceptsWalkIn', val)}
                   />
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Accepts Walk-in</span>
-                </label>
+                </div>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={!!form.acceptsAppointment}
-                    onChange={(e) => handleFieldChange('acceptsAppointment', e.target.checked)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Toggle
+                    value={!!form.acceptsAppointment}
+                    onChange={(val) => handleFieldChange('acceptsAppointment', val)}
                   />
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Accepts Appointment</span>
-                </label>
+                </div>
               </div>
             </div>
 
@@ -587,6 +585,40 @@ function FormField({ label, type = 'text', inputMode, maxLength, value, error, o
         </div>
       )}
     </div>
+  )
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <button
+      type="button"
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 99,
+        background: value ? '#2563EB' : 'var(--border)',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+        display: 'block',
+      }}
+      onClick={() => onChange(!value)}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: value ? 22 : 3,
+          width: 18,
+          height: 18,
+          background: '#fff',
+          borderRadius: '50%',
+          transition: 'left .2s',
+          display: 'block',
+          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+        }}
+      />
+    </button>
   )
 }
 

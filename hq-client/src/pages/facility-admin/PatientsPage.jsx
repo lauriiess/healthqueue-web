@@ -50,8 +50,10 @@ export default function PatientsPage() {
   const [formErrors, setFormErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [listView, setListView] = useState('active') // 'active' | 'deactivated'
   const [deactivateTarget, setDeactivateTarget] = useState(null)
   const [deactivating, setDeactivating] = useState(false)
+  const [reactivating, setReactivating] = useState(false)
 
   const showToast = useCallback((message) => {
     setToast(message)
@@ -153,17 +155,16 @@ export default function PatientsPage() {
     }
   }
 
-  const handleDeactivate = async (id) => {
-    setDeactivating(true)
+  const handleReactivate = async (p) => {
+    setReactivating(true)
     try {
-      await patientsApi.deactivate(id)
-      setDeactivateTarget(null)
-      showToast('Patient deactivated')
+      await patientsApi.update(p._id, { isActive: true })
+      showToast('Patient reactivated')
       loadPatients()
     } catch (e) {
-      showToast(e?.response?.data?.message || 'Failed to deactivate patient')
+      showToast(e?.response?.data?.message || 'Failed to reactivate patient')
     } finally {
-      setDeactivating(false)
+      setReactivating(false)
     }
   }
 
@@ -199,6 +200,7 @@ export default function PatientsPage() {
     const q = search.trim().toLowerCase()
 
     return patients.filter((p) => {
+      const matchView = listView === 'active' ? p.isActive !== false : p.isActive === false
       const matchType = typeFilter === 'All' || p.patientType === typeFilter
       const matchSearch =
         !q ||
@@ -207,9 +209,12 @@ export default function PatientsPage() {
         p.email?.toLowerCase().includes(q) ||
         p.philHealthNumber?.toLowerCase().includes(q)
 
-      return matchType && matchSearch
+      return matchView && matchType && matchSearch
     })
-  }, [patients, search, typeFilter])
+  }, [patients, search, typeFilter, listView])
+
+  const activeCount = useMemo(() => patients.filter((p) => p.isActive !== false).length, [patients])
+  const inactiveCount = useMemo(() => patients.filter((p) => p.isActive === false).length, [patients])
 
   const pageCount = Math.max(1, Math.ceil(filteredPatients.length / PER_PAGE))
   const paginatedPatients = useMemo(() => {
@@ -219,6 +224,44 @@ export default function PatientsPage() {
   return (
     <div className={styles.page}>
       {toast && <div className={styles.toast}>{toast}</div>}
+
+      {/* Active / Deactivated View Toggle */}
+      <div
+        style={{
+          display: 'flex',
+          background: 'var(--bg-2)',
+          borderRadius: 8,
+          padding: 3,
+          gap: 0,
+          width: 'fit-content',
+          marginBottom: 12,
+        }}
+      >
+        {[
+          ['active', `Active Patients (${activeCount})`],
+          ['deactivated', `Deactivated Patients (${inactiveCount})`],
+        ].map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => {
+              setListView(v)
+              setPage(1)
+            }}
+            style={{
+              padding: '7px 16px',
+              borderRadius: 6,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              background: listView === v ? 'var(--primary)' : 'transparent',
+              color: listView === v ? '#fff' : 'var(--text-2)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="card">
         {/* Header */}
@@ -321,7 +364,7 @@ export default function PatientsPage() {
             ) : paginatedPatients.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>
-                  No patients found.
+                  {listView === 'active' ? 'No active patients found.' : 'No deactivated patients found.'}
                 </td>
               </tr>
             ) : (
@@ -362,20 +405,32 @@ export default function PatientsPage() {
                       >
                         Edit
                       </button>
-                      <button
-                        className="btn btn-sm"
-                        style={{
-                          background: 'var(--error-lt)',
-                          color: 'var(--error)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                        }}
-                        title="Deactivate"
-                        onClick={() => setDeactivateTarget(p)}
-                      >
-                        Deactivate
-                      </button>
+                      {p.isActive === false ? (
+                        <button
+                          className="btn btn-outline btn-sm"
+                          title="Reactivate"
+                          onClick={() => handleReactivate(p)}
+                          disabled={reactivating}
+                          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                        >
+                          {reactivating ? 'Reactivating…' : 'Reactivate'}
+                        </button>
+                      ) : (
+                        <button
+                          className="btn btn-sm"
+                          style={{
+                            background: 'var(--error-lt)',
+                            color: 'var(--error)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                          }}
+                          title="Deactivate"
+                          onClick={() => setDeactivateTarget(p)}
+                        >
+                          Deactivate
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

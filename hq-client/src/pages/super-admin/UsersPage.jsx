@@ -114,6 +114,8 @@ export default function UserManagementPage() {
   const [assignClinicId, setAssignClinicId] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [deactivateTarget, setDeactivateTarget] = useState(null)
+  const [reactivateTarget, setReactivateTarget] = useState(null)
+  const [reactivating, setReactivating] = useState(false)
 
   // Role Management State
   const [showRoleManager, setShowRoleManager] = useState(false)
@@ -248,12 +250,16 @@ export default function UserManagementPage() {
   }
 
   const handleReactivate = async (u) => {
+    setReactivating(true)
     try {
       await usersApi.update(u._id, { isActive: true })
+      setReactivateTarget(null)
       showToast('User reactivated')
       await loadUsers()
     } catch (e) {
       showToast(e?.response?.data?.message || 'Failed to reactivate user.')
+    } finally {
+      setReactivating(false)
     }
   }
 
@@ -624,7 +630,7 @@ export default function UserManagementPage() {
                                 Deactivate
                               </button>
                             ) : (
-                              <button className="btn btn-outline btn-sm" onClick={() => handleReactivate(u)}>
+                              <button className="btn btn-outline btn-sm" onClick={() => setReactivateTarget(u)}>
                                 Reactivate
                               </button>
                             )}
@@ -1070,12 +1076,13 @@ export default function UserManagementPage() {
                   onChange={(e) => setAssignClinicId(e.target.value)}
                 >
                   <option value="">— Remove clinic assignment —</option>
-                  {clinics.map((cl) => (
-                    <option key={cl._id} value={cl._id}>
-                      {cl.name.replace('Hi-Precision Diagnostics - ', '')}
-                      {cl.status === 'open' ? ' ✓' : ''}
-                    </option>
-                  ))}
+                  {clinics
+                    .filter((cl) => cl.status === 'open')
+                    .map((cl) => (
+                      <option key={cl._id} value={cl._id}>
+                        {cl.name.replace('Hi-Precision Diagnostics - ', '')}
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>
@@ -1124,6 +1131,39 @@ export default function UserManagementPage() {
                 onClick={() => handleDeactivate(deactivateTarget)}
               >
                 Yes, Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── REACTIVATE CONFIRMATION MODAL ── */}
+      {reactivateTarget && (
+        <div className="modal-overlay" onClick={() => setReactivateTarget(null)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">Reactivate User</span>
+              <button className="modal-close" onClick={() => setReactivateTarget(null)}>
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+                Are you sure you want to reactivate{' '}
+                <strong style={{ color: 'var(--text)' }}>{reactivateTarget.fullName}</strong>? They will regain
+                access to log in.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" onClick={() => setReactivateTarget(null)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={() => handleReactivate(reactivateTarget)}
+                disabled={reactivating}
+              >
+                {reactivating ? 'Reactivating…' : 'Yes, Reactivate'}
               </button>
             </div>
           </div>

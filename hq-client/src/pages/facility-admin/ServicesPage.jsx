@@ -417,15 +417,11 @@ export default function ServicesPage() {
               </div>
 
               <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                <input
-                  type="checkbox"
-                  id="service-avail"
-                  checked={!!form.isAvailable}
-                  onChange={(e) => handleFieldChange('isAvailable', e.target.checked)}
+                <Toggle
+                  value={!!form.isAvailable}
+                  onChange={(val) => handleFieldChange('isAvailable', val)}
                 />
-                <label htmlFor="service-avail" style={{ cursor: 'pointer', color: 'var(--text-2)', fontSize: 13 }}>
-                  Currently available to patients
-                </label>
+                <span style={{ color: 'var(--text-2)', fontSize: 13 }}>Currently available to patients</span>
               </div>
             </div>
 
@@ -511,5 +507,39 @@ export default function ServicesPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <button
+      type="button"
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 99,
+        background: value ? '#2563EB' : 'var(--border)',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+        display: 'block',
+      }}
+      onClick={() => onChange(!value)}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: value ? 22 : 3,
+          width: 18,
+          height: 18,
+          background: '#fff',
+          borderRadius: '50%',
+          transition: 'left .2s',
+          display: 'block',
+          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+        }}
+      />
+    </button>
   )
 }

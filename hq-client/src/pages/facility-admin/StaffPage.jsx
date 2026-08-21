@@ -56,8 +56,10 @@ export default function StaffPage() {
   const [formErrors, setFormErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState('')
+  const [listView, setListView] = useState('active') // 'active' | 'deactivated'
   const [deactivateTarget, setDeactivateTarget] = useState(null)
   const [deactivating, setDeactivating] = useState(false)
+  const [reactivating, setReactivating] = useState(false)
   const toastTimerRef = useRef(null)
 
   const showToast = useCallback((message) => {
@@ -216,17 +218,16 @@ export default function StaffPage() {
     }
   }
 
-  const handleDeactivate = async (id) => {
-    setDeactivating(true)
+  const handleReactivate = async (s) => {
+    setReactivating(true)
     try {
-      await staffApi.deactivate(id)
-      setDeactivateTarget(null)
-      showToast('Staff member deactivated')
+      await staffApi.update(s._id, { isActive: true })
+      showToast('Staff member reactivated')
       await loadStaff()
     } catch (e) {
-      showToast(e?.response?.data?.message || 'Failed to deactivate staff member')
+      showToast(e?.response?.data?.message || 'Failed to reactivate staff member')
     } finally {
-      setDeactivating(false)
+      setReactivating(false)
     }
   }
 
@@ -263,6 +264,8 @@ export default function StaffPage() {
       if (s._id === user?._id) return false
       if (s.role === 'facility_admin' || s.role === 'superadmin') return false
 
+      const matchView = listView === 'active' ? s.isActive : !s.isActive
+
       const specKey = (s.specialization || '').toLowerCase()
       const matchSpec =
         specFilter === 'All' ||
@@ -276,9 +279,18 @@ export default function StaffPage() {
         (s.phone || '').toLowerCase().includes(q) ||
         (s.specialization || '').toLowerCase().includes(q)
 
-      return matchSpec && matchSearch
+      return matchView && matchSpec && matchSearch
     })
-  }, [staff, search, specFilter, user])
+  }, [staff, search, specFilter, user, listView])
+
+  const activeCount = useMemo(
+    () => staff.filter((s) => s.isActive && s._id !== user?._id && s.role !== 'facility_admin' && s.role !== 'superadmin').length,
+    [staff, user]
+  )
+  const inactiveCount = useMemo(
+    () => staff.filter((s) => !s.isActive && s._id !== user?._id && s.role !== 'facility_admin' && s.role !== 'superadmin').length,
+    [staff, user]
+  )
 
   return (
     <div className={styles.page}>
@@ -299,6 +311,41 @@ export default function StaffPage() {
           <strong>No clinic assigned.</strong> Your facility admin account is not linked to a clinic. Ask a System Administrator to assign your account to a clinic.
         </div>
       )}
+
+      {/* Active / Deactivated View Toggle */}
+      <div
+        style={{
+          display: 'flex',
+          background: 'var(--bg-2)',
+          borderRadius: 8,
+          padding: 3,
+          gap: 0,
+          width: 'fit-content',
+          marginBottom: 12,
+        }}
+      >
+        {[
+          ['active', `Active Staff (${activeCount})`],
+          ['deactivated', `Deactivated Staff (${inactiveCount})`],
+        ].map(([v, label]) => (
+          <button
+            key={v}
+            onClick={() => setListView(v)}
+            style={{
+              padding: '7px 16px',
+              borderRadius: 6,
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              background: listView === v ? 'var(--primary)' : 'transparent',
+              color: listView === v ? '#fff' : 'var(--text-2)',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="card">
         {/* Header */}
@@ -404,7 +451,7 @@ export default function StaffPage() {
               ) : filteredStaff.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--muted)' }}>
-                    No staff found
+                    {listView === 'active' ? 'No active staff found' : 'No deactivated staff found'}
                   </td>
                 </tr>
               ) : (
@@ -446,20 +493,32 @@ export default function StaffPage() {
                           >
                             Edit
                           </button>
-                          <button
-                            className="btn btn-sm"
-                            style={{
-                              background: 'var(--error-lt)',
-                              color: 'var(--error)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                            }}
-                            title="Deactivate"
-                            onClick={() => setDeactivateTarget(s)}
-                          >
-                            Deactivate
-                          </button>
+                          {s.isActive ? (
+                            <button
+                              className="btn btn-sm"
+                              style={{
+                                background: 'var(--error-lt)',
+                                color: 'var(--error)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
+                              title="Deactivate"
+                              onClick={() => setDeactivateTarget(s)}
+                            >
+                              Deactivate
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-outline btn-sm"
+                              title="Reactivate"
+                              onClick={() => handleReactivate(s)}
+                              disabled={reactivating}
+                              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                            >
+                              {reactivating ? 'Reactivating…' : 'Reactivate'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

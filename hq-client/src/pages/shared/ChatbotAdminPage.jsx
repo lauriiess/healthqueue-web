@@ -376,7 +376,7 @@ export default function ChatbotAdminPage() {
               ['Chatbot Mode', 'FAQ Fallback (No Rasa server configured)'],
               ['Default Language', 'Filipino / English (Bilingual)'],
               ['Max Response Length', '500 characters'],
-              ['Fallback Message', '"Sorry, I didn\'t understand. Please visit our reception desk."'],
+              ['Fallback Message', '"Sorry, I didn\'t understand. Redirecting you to a healthcare staff member."'],
             ].map(([label, value]) => (
               <div
                 key={label}
@@ -581,16 +581,11 @@ export default function ChatbotAdminPage() {
               </div>
 
               <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={form.isActive}
-                  onChange={(e) => handleFieldChange('isActive', e.target.checked)}
-                  style={{ width: 16, height: 16 }}
+                <Toggle
+                  value={!!form.isActive}
+                  onChange={(val) => handleFieldChange('isActive', val)}
                 />
-                <label htmlFor="isActive" style={{ fontSize: 13, color: 'var(--text-2)', cursor: 'pointer' }}>
-                  Active (visible to patients)
-                </label>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Active (visible to patients)</span>
               </div>
 
               {/* Keyword preview */}
@@ -626,5 +621,39 @@ export default function ChatbotAdminPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function Toggle({ value, onChange }) {
+  return (
+    <button
+      type="button"
+      style={{
+        width: 44,
+        height: 24,
+        borderRadius: 99,
+        background: value ? '#2563EB' : 'var(--border)',
+        border: 'none',
+        cursor: 'pointer',
+        position: 'relative',
+        display: 'block',
+      }}
+      onClick={() => onChange(!value)}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          top: 3,
+          left: value ? 22 : 3,
+          width: 18,
+          height: 18,
+          background: '#fff',
+          borderRadius: '50%',
+          transition: 'left .2s',
+          display: 'block',
+          boxShadow: '0 1px 3px rgba(0,0,0,.2)',
+        }}
+      />
+    </button>
   )
 }
