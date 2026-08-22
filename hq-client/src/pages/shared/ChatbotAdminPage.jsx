@@ -520,7 +520,7 @@ export default function ChatbotAdminPage() {
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">Question / Intent *</label>
+                <label className="form-label">Question / Intent <span style={{ color: '#DC2626' }}>*</span></label>
                 <input
                   className="form-input"
                   value={form.question}
@@ -536,7 +536,7 @@ export default function ChatbotAdminPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Answer *</label>
+                <label className="form-label">Answer <span style={{ color: '#DC2626' }}>*</span></label>
                 <textarea
                   className="form-textarea"
                   rows={4}
