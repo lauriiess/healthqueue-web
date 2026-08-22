@@ -4,6 +4,7 @@
 const FAQ = require('../models/FAQ');
 const ChatLog = require('../models/ChatLog');
 const { HttpStatus, RASA_SERVER_URL, OPENAI_API_KEY } = require('../config/config');
+const { logAction } = require('../utils/auditLog');
 
 // ── FAQs ──────────────────────────────────────────────────────────────────────
 const getFAQs = async (req, res) => {
@@ -41,6 +42,15 @@ const createFAQ = async (req, res) => {
       createdBy: req.user._id,
     });
 
+    await logAction({
+      actor: req.user,
+      action: 'create',
+      targetType: 'FAQ',
+      targetId: faq._id,
+      targetLabel: faq.question,
+      details: { category: faq.category },
+    });
+
     return res.status(HttpStatus.CREATED).json({ success: true, data: faq });
   } catch (err) {
     console.error('createFAQ error:', err.message);
@@ -65,6 +75,16 @@ const updateFAQ = async (req, res) => {
     }
     const faq = await FAQ.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!faq) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'FAQ not found.' });
+
+    await logAction({
+      actor: req.user,
+      action: 'update',
+      targetType: 'FAQ',
+      targetId: faq._id,
+      targetLabel: faq.question,
+      details: update,
+    });
+
     return res.status(HttpStatus.OK).json({ success: true, data: faq });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to update FAQ.' });
@@ -75,6 +95,15 @@ const deleteFAQ = async (req, res) => {
   try {
     const faq = await FAQ.findByIdAndDelete(req.params.id);
     if (!faq) return res.status(HttpStatus.NOT_FOUND).json({ success: false, message: 'FAQ not found.' });
+
+    await logAction({
+      actor: req.user,
+      action: 'delete',
+      targetType: 'FAQ',
+      targetId: req.params.id,
+      targetLabel: faq.question,
+    });
+
     return res.status(HttpStatus.OK).json({ success: true, message: 'FAQ deleted.' });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: 'Failed to delete FAQ.' });
@@ -85,7 +114,24 @@ const deleteFAQ = async (req, res) => {
 const getChatLogs = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit || '100', 10);
-    const logs = await ChatLog.find({})
+    // This used to fetch ALL clinics' chat logs unfiltered — staff would
+    // either see other clinics' patient conversations mixed in, or (with a
+    // client-side clinic filter applied afterward) end up with nothing
+    // matching their own clinic depending on ordering/limit. Scope it the
+    // same way getEscalatedLogs() already does.
+    const filter = {};
+    // Patients' User accounts don't carry a clinicId, so a chat log only
+    // gets one if the patient app explicitly sent it — many legitimate
+    // logs have clinicId: null. A strict equality filter would silently
+    // hide those, which is very likely the actual cause of "staff not
+    // receiving logs" — so unassigned logs are included alongside the
+    // staff's own clinic instead of being excluded.
+    if (['facility_admin', 'staff'].includes(req.user.role) && req.user.clinicId) {
+      filter.$or = [{ clinicId: req.user.clinicId }, { clinicId: null }];
+    } else if (req.query.clinicId) {
+      filter.$or = [{ clinicId: req.query.clinicId }, { clinicId: null }];
+    }
+    const logs = await ChatLog.find(filter)
       .populate('patient', 'fullName email')
       .sort({ createdAt: -1 })
       .limit(limit);
@@ -226,13 +272,22 @@ const testChatbot = async (req, res) => {
 // ── GET /api/chatbot-admin/escalated ──────────────────────────────────────────
 const getEscalatedLogs = async (req, res) => {
   try {
-    const { clinicId, resolved } = req.query;
+    const { resolved } = req.query;
     const filter = { isEscalated: true };
-    if (clinicId) filter.clinicId = clinicId;
+    // Same reasoning as getChatLogs: don't strictly exclude logs with no
+    // clinicId — a patient's account isn't clinic-scoped, so this equality
+    // filter was very likely hiding real escalations from staff.
+    if (['facility_admin', 'staff'].includes(req.user.role) && req.user.clinicId) {
+      filter.$or = [{ clinicId: req.user.clinicId }, { clinicId: null }];
+    } else if (req.query.clinicId) {
+      filter.$or = [{ clinicId: req.query.clinicId }, { clinicId: null }];
+    }
     if (resolved === 'true') filter.resolvedByStaff = true;
     if (resolved === 'false') filter.resolvedByStaff = false;
     const logs = await ChatLog.find(filter)
       .populate('patient', 'fullName email phone')
+      .populate('clinicId', 'name')
+      .populate('escalatedToStaff', 'fullName role')
       .sort({ escalatedAt: -1 })
       .limit(100);
     return res.status(HttpStatus.OK).json({ success: true, data: logs });

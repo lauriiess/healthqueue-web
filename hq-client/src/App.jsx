@@ -23,7 +23,6 @@ import SuperQueueOversightPage from './pages/super-admin/QueueOversightPage'
 import SystemReportsPage from './pages/super-admin/SystemReportsPage'
 import SystemConfigPage  from './pages/super-admin/SystemConfigPage'
 import ClinicManagementPage from './pages/super-admin/ClinicManagementPage'
-import AuditLogPage from './pages/super-admin/AuditLogPage'
 
 // Shared
 import ChatbotAdminPage from './pages/shared/ChatbotAdminPage'
@@ -97,7 +96,6 @@ function AppRoutes() {
         <Route path="chatbot"   element={<ChatbotAdminPage />} />
         <Route path="config"    element={<SystemConfigPage />} />
         <Route path="clinic-management" element={<ClinicManagementPage />} />
-        <Route path="audit-log" element={<AuditLogPage />} />
       </Route>
 
       {/* Root redirect */}

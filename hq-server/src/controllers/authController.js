@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Patient = require('../models/Patient');
 const { signToken } = require('../utils/token');
 const { HttpStatus } = require('../config/config');
+const { logAction } = require('../utils/auditLog');
 
 /**
  * Generates a 6-digit OTP code
@@ -220,6 +221,19 @@ const login = async (req, res) => {
 
     const token = signToken(user);
 
+    // Only admin/staff logins go to the audit trail — logging every patient
+    // login would drown out the actions the audit log exists to surface.
+    if (['super_admin', 'facility_admin', 'staff'].includes(user.role)) {
+      await logAction({
+        actor: user,
+        action: 'login',
+        targetType: 'User',
+        targetId: user._id,
+        targetLabel: user.fullName,
+        clinicId: user.clinicId,
+      });
+    }
+
     return res.status(HttpStatus.OK).json({
       success: true,
       token,
@@ -277,10 +291,32 @@ const getMe = async (req, res) => {
   }
 };
 
+// POST /api/auth/logout — Records a logout event for the audit trail.
+// The JWT itself is stateless and expires on its own; this endpoint's only
+// job is accountability, not invalidating the token.
+const logout = async (req, res) => {
+  try {
+    if (['super_admin', 'facility_admin', 'staff'].includes(req.user.role)) {
+      await logAction({
+        actor: req.user,
+        action: 'logout',
+        targetType: 'User',
+        targetId: req.user._id,
+        targetLabel: req.user.fullName,
+        clinicId: req.user.clinicId,
+      });
+    }
+    return res.status(HttpStatus.OK).json({ success: true, message: 'Logged out.' });
+  } catch (err) {
+    return res.status(HttpStatus.OK).json({ success: true, message: 'Logged out.' });
+  }
+};
+
 module.exports = {
   register,
   verifyOTP,
   resendOTP,
   login,
+  logout,
   getMe,
 };

@@ -50,6 +50,7 @@ const unwrap = (response, fallback = null) => ({
 export const authApi = {
   login: (email, password) => api.post('/api/auth/login', { email, password }),
   me: () => api.get('/api/auth/me'),
+  logout: () => api.post('/api/auth/logout'),
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

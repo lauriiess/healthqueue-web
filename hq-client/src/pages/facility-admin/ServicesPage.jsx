@@ -341,14 +341,22 @@ export default function ServicesPage() {
               <button className="modal-close" onClick={closeEditInfo}>✕</button>
             </div>
             <div className="modal-body">
-              <div className={styles.formGrid2}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 16, rowGap: 20 }}>
                 {CLINIC_INFO_FIELDS.map(([field, label]) => (
-                  <div key={field} className="form-group">
-                    <label className="form-label">{label}</label>
+                  <div key={field} className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" style={{ display: 'block', marginBottom: 6 }}>{label}</label>
                     <input
                       className="form-input"
                       value={infoForm[field] || ''}
-                      onChange={(e) => setInfoForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                      inputMode={field === 'contactNumber' ? 'numeric' : undefined}
+                      maxLength={field === 'contactNumber' ? 11 : undefined}
+                      onChange={(e) => {
+                        let val = e.target.value
+                        if (field === 'contactNumber') {
+                          val = val.replace(/\D/g, '').slice(0, 11)
+                        }
+                        setInfoForm((prev) => ({ ...prev, [field]: val }))
+                      }}
                     />
                   </div>
                 ))}

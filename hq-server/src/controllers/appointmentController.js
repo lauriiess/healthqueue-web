@@ -6,6 +6,7 @@ const Clinic = require('../models/Clinic');
 const Patient = require('../models/Patient');
 const TimeSlot = require('../models/TimeSlot');
 const { HttpStatus } = require('../config/config');
+const { logAction } = require('../utils/auditLog');
 
 // POST /api/appointments — Patient books an appointment
 const bookAppointment = async (req, res) => {
@@ -378,6 +379,22 @@ const getAppointment = async (req, res) => {
 const updateStatus = async (req, res) => {
   try {
     const appt = await Appointment.findByIdAndUpdate(req.params.id, { status: req.body.status }, { new: true });
+
+    if (appt) {
+      // Map to the specific audit action when we have one, otherwise fall
+      // back to a generic 'update' so any status value is still recorded.
+      const actionForStatus = { completed: 'complete', no_show: 'no_show' };
+      await logAction({
+        actor: req.user,
+        action: actionForStatus[appt.status] || 'update',
+        targetType: 'Appointment',
+        targetId: appt._id,
+        targetLabel: `${appt.patientName} — ${appt.serviceName}`,
+        clinicId: appt.clinic,
+        details: { status: appt.status },
+      });
+    }
+
     return res.status(HttpStatus.OK).json({ success: true, data: appt });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });
@@ -388,7 +405,20 @@ const getTodayAppointments = async (req, res) => {
   try {
     const start = new Date(); start.setHours(0,0,0,0);
     const end = new Date(); end.setHours(23,59,59,999);
-    const appts = await Appointment.find({ appointmentDate: { $gte: start, $lte: end } }).populate('clinic patient');
+
+    // This used to ignore clinicId entirely, so staff either saw every
+    // clinic's appointments mixed together or — depending on how the
+    // frontend filtered the result — none of their own. Scope it the same
+    // way getAppointments() does: facility_admin/staff use their assigned
+    // clinic, everyone else (e.g. super_admin) can pass ?clinicId=.
+    const filter = { appointmentDate: { $gte: start, $lte: end } };
+    if (['facility_admin', 'staff'].includes(req.user.role) && req.user.clinicId) {
+      filter.clinic = req.user.clinicId;
+    } else if (req.query.clinicId) {
+      filter.clinic = req.query.clinicId;
+    }
+
+    const appts = await Appointment.find(filter).populate('clinic patient');
     return res.status(HttpStatus.OK).json({ success: true, data: appts });
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, message: err.message });

@@ -19,7 +19,7 @@ async function logAction({ actor, action, targetType, targetId, targetLabel = ''
       details,
     });
   } catch (err) {
-    console.error('⚠️ Failed to write audit log:', err.message);
+    console.error('Failed to write audit log:', err.message);
   }
 }
 
